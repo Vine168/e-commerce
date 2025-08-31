@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Product model for e-commerce accessories
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  priceCents Int     // Store price in cents to avoid floating point issues
+  currency  String   @default("USD")
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+// Order model for tracking customer orders
+model Order {
+  id           String      @id @default(cuid())
+  customerName String
+  phone        String
+  address      String
+  amountCents  Int         // Total amount in cents
+  currency     String      @default("USD")
+  status       OrderStatus @default(PENDING)
+  khqrString   String?     // Bakong KHQR string
+  md5          String?     // MD5 hash for transaction verification
+  paidAt       DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+// OrderItem model for storing individual items in an order
+model OrderItem {
+  id         String @id @default(cuid())
+  orderId    String
+  productId  String
+  qty        Int
+  priceCents Int    // Price at time of order
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// Enum for order status
+enum OrderStatus {
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+}
